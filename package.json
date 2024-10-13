@@ -5,7 +5,7 @@
   "main": "server.ts",
   "scripts": {
   "build": "npx tsc",
-  "start": "node server.ts"
+  "start": "nodemon --exec ts-node server.ts"
 },
   "keywords": [],
   "author": "",
