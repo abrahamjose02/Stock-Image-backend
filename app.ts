@@ -15,7 +15,7 @@ connectDB();
 
 app.use(express.json());
 app.use(cors({
-    origin: "https://stock-image-frontend.vercel.app",
+    origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true
 }));
