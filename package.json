@@ -4,9 +4,10 @@
   "description": "",
   "main": "server.ts",
   "scripts": {
-    "build":"npx tsc",
-    "start": "nodemon --exec 'node --max-old-space-size=4096 -r ts-node/register' server.ts"
-  },
+  "build": "npx tsc",
+  "start": "ts-node server.ts",
+  "vercel-build": "npm run build"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
