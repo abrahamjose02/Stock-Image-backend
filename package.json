@@ -4,9 +4,9 @@
   "description": "",
   "main": "server.ts",
   "scripts": {
-    "build": "npx tsc",
-    "start": "nodemon --exec 'node --max-old-space-size=4096 -r ts-node/register' server.ts"
-  },
+  "build": "npx tsc",
+  "start": "nodemon --exec 'ts-node' server.ts"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
