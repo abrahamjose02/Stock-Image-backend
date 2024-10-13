@@ -97,8 +97,8 @@ export const login: RequestHandler = async (req, res) => {
     console.log('Access Token:', accessToken);
     console.log('Refresh Token:', refreshToken);
 
-    res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 15 * 60 * 1000 });
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 5 * 24 * 60 * 60 * 1000 });
+    res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 15 * 60 * 1000 ,sameSite: 'none'});
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 5 * 24 * 60 * 60 * 1000,sameSite: 'none' });
 
     res.status(200).json({ message: 'Login successful', user });
   } catch (error) {

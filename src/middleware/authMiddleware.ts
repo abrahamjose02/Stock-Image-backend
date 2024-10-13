@@ -10,6 +10,8 @@ export interface AuthenticatedRequest extends Request {
 export const isvalidate = (req:AuthenticatedRequest,res:Response,next:NextFunction):any =>{
     const {accessToken} = req.cookies;
 
+    console.log('Access Token:', accessToken);
+
     if(!accessToken){
         return res.status(401).json({message:"Not authorized , no token"})
     }
