@@ -20,9 +20,10 @@ connectDB()
 
 app.use(express.json());
 app.use(cors({
-    origin: "https://stock-image-frontend.vercel.app",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true
+    origin: process.env.NODE_ENV === 'production'
+        ? 'https://stockimage.vercel.app'
+        : 'http://localhost:5173',  
+    credentials: true, 
 }));
 app.use(cookieParser());
 
