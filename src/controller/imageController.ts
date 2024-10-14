@@ -1,30 +1,27 @@
-import { Request,Response,NextFunction } from "express";
-import User from "../model/userModal";
+// imageController.ts
+import { Request, Response, NextFunction } from "express";
 import Image from "../model/imageModal";
-import AWS from 'aws-sdk';
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import s3 from "../utils/s3";
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const upload = multer({
-    storage:multer.memoryStorage(),
-    limits:{fileSize:5*1024*1024}
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
 });
 
 const MAX_TITLE_LENGTH = 50;
 const MAX_FILENAME_LENGTH = 50;
 
-export const uploadMiddleware = upload.array("images",10);
-
-
+export const uploadMiddleware = upload.array("images", 10);
 
 export const uploadImages = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
       const files = req.files as Express.Multer.File[];
-      
-      
-      const titlesRaw = req.body.titles; 
+
+      const titlesRaw = req.body.titles;
       if (typeof titlesRaw !== 'string') {
           res.status(400).json({ error: "Titles must be a comma-separated string." });
           return;
@@ -59,13 +56,15 @@ export const uploadImages = async (req: AuthenticatedRequest, res: Response, nex
               ContentType: file.mimetype,
           };
 
-          const uploadResult = await s3.upload(params).promise();
+          const uploadResult = await s3.send(new PutObjectCommand(params));
+
+          const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${imageKey}`;
 
           const title = titles[index]?.slice(0, MAX_TITLE_LENGTH) || truncatedFileName;
 
           const newImage = new Image({
               userId,
-              imageUrl: uploadResult.Location,
+              imageUrl: imageUrl,
               imageKey: imageKey,
               title,
               order: nextOrder + index,
@@ -80,10 +79,9 @@ export const uploadImages = async (req: AuthenticatedRequest, res: Response, nex
       });
   } catch (e: any) {
       console.log("Error uploading images:", e);
-      res.status(500).json({ e: "Error uploading images" });
+      res.status(500).json({ error: "Error uploading images" });
   }
 };
-
 
 export const getImages = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -116,31 +114,31 @@ export const getImages = async (req: AuthenticatedRequest, res: Response, next: 
   }
 };
 
-export const updateImageTitle = async(req:AuthenticatedRequest,res:Response,next:NextFunction):Promise<void> =>{
-    try {
-        const {id} = req.params;
-        const{title} = req.body;
-        const userId = req.user?.id;
+export const updateImageTitle = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+      const { id } = req.params;
+      const { title } = req.body;
+      const userId = req.user?.id;
 
-        const truncatedTitle = title.slice(0,MAX_TITLE_LENGTH);
+      const truncatedTitle = title.slice(0, MAX_TITLE_LENGTH);
 
-        const image = await Image.findOneAndUpdate(
-            {_id:id,userId},
-            {title:truncatedTitle},
-            {new:true}
-        );
+      const image = await Image.findOneAndUpdate(
+          { _id: id, userId },
+          { title: truncatedTitle },
+          { new: true }
+      );
 
-        if(!image){
-             res.status(404).json({error:"Image not found"});
-             return;
-        }
+      if (!image) {
+          res.status(404).json({ error: "Image not found" });
+          return;
+      }
 
-        res.json(image)
-    } catch (error:any) {
-        console.log("Error updating image title:", error);
-        res.status(500).json({ error: "Error updating image title" });
-    }
-}
+      res.json(image);
+  } catch (error: any) {
+      console.log("Error updating image title:", error);
+      res.status(500).json({ error: "Error updating image title" });
+  }
+};
 
 export const deleteImage = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -159,16 +157,16 @@ export const deleteImage = async (req: AuthenticatedRequest, res: Response, next
           Key: image.imageKey,
       };
 
-      await s3.deleteObject(params).promise();
+      await s3.send(new DeleteObjectCommand(params));
 
       res.json({ message: "Image deleted successfully" });
-  } catch (error) {
+  } catch (error: any) {
       console.error("Error deleting image:", error);
       res.status(500).json({ error: "Error deleting image" });
   }
 };
 
-export const reorderImages = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const reorderImages = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
       const { imageIds } = req.body;
       const userId = req.user?.id;
@@ -184,7 +182,7 @@ export const reorderImages = async (req: AuthenticatedRequest, res: Response, ne
       );
 
       res.json({ message: "Images reordered successfully" });
-  } catch (error) {
+  } catch (error: any) {
       console.error("Error reordering images:", error);
       res.status(500).json({ error: "Error reordering images" });
   }
