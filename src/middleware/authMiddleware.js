@@ -8,7 +8,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const isvalidate = (req, res, next) => {
-    const accessToken = req.cookies.accessToken;
+    const { accessToken } = req.cookies;
     console.log('Access Token:', accessToken);
     if (!accessToken) {
         return res.status(401).json({ message: "Not authorized , no token" });
