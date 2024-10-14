@@ -8,7 +8,7 @@ export interface AuthenticatedRequest extends Request {
   }
 
 export const isvalidate = (req:AuthenticatedRequest,res:Response,next:NextFunction):any =>{
-    const {accessToken} = req.cookies;
+    const accessToken = req.cookies.accessToken;
 
     console.log('Access Token:', accessToken);
 
