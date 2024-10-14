@@ -17,9 +17,10 @@ const imageModal_1 = __importDefault(require("../model/imageModal"));
 const multer_1 = __importDefault(require("multer"));
 const uuid_1 = require("uuid");
 const s3_1 = __importDefault(require("../utils/s3"));
+const client_s3_1 = require("@aws-sdk/client-s3");
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
 });
 const MAX_TITLE_LENGTH = 50;
 const MAX_FILENAME_LENGTH = 50;
@@ -55,11 +56,12 @@ const uploadImages = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
                 Body: file.buffer,
                 ContentType: file.mimetype,
             };
-            const uploadResult = yield s3_1.default.upload(params).promise();
+            const uploadResult = yield s3_1.default.send(new client_s3_1.PutObjectCommand(params));
+            const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${imageKey}`;
             const title = ((_a = titles[index]) === null || _a === void 0 ? void 0 : _a.slice(0, MAX_TITLE_LENGTH)) || truncatedFileName;
             const newImage = new imageModal_1.default({
                 userId,
-                imageUrl: uploadResult.Location,
+                imageUrl: imageUrl,
                 imageKey: imageKey,
                 title,
                 order: nextOrder + index,
@@ -74,7 +76,7 @@ const uploadImages = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (e) {
         console.log("Error uploading images:", e);
-        res.status(500).json({ e: "Error uploading images" });
+        res.status(500).json({ error: "Error uploading images" });
     }
 });
 exports.uploadImages = uploadImages;
@@ -141,7 +143,7 @@ const deleteImage = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: image.imageKey,
         };
-        yield s3_1.default.deleteObject(params).promise();
+        yield s3_1.default.send(new client_s3_1.DeleteObjectCommand(params));
         res.json({ message: "Image deleted successfully" });
     }
     catch (error) {
