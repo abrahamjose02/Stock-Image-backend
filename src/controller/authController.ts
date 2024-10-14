@@ -110,6 +110,8 @@ export const login: RequestHandler = async (req, res) => {
       sameSite: 'none'
     });    
 
+    console.log('Response headers:', res.getHeaders());
+
     res.status(200).json({ message: 'Login successful', user });
   } catch (error) {
     console.log(error);
