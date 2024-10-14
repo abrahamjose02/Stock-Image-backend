@@ -85,21 +85,36 @@ export const uploadImages = async (req: AuthenticatedRequest, res: Response, nex
 };
 
 
-export const getImages = async(req:AuthenticatedRequest,res:Response,next:NextFunction):Promise<void> =>{
-    try {
+export const getImages = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+      if (!req.user) {
+          res.status(401).json({ message: "Unauthorized, user not found" });
+          return;
+      }
+      const userId = req.user.id;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const skip = (page - 1) * limit;
 
-        if (!req.user) {
-             res.status(401).json({ message: "Unauthorized, user not found" });
-             return;
-        }
-        const userId = req.user.id;
-        const images = await Image.find({userId}).sort("order");
-        res.status(200).json({images})
-    } catch (e:any) {
-        console.log("Error fetching images:", e);
-    res.status(500).json({ e: "Internal server error" });
-    }
-}
+      const images = await Image.find({ userId })
+          .select('imageUrl title order')
+          .sort("order")
+          .skip(skip)
+          .limit(limit);
+
+      const total = await Image.countDocuments({ userId });
+
+      res.status(200).json({
+          images,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalImages: total
+      });
+  } catch (e: any) {
+      console.error("Error fetching images:", e);
+      res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const updateImageTitle = async(req:AuthenticatedRequest,res:Response,next:NextFunction):Promise<void> =>{
     try {
@@ -127,52 +142,50 @@ export const updateImageTitle = async(req:AuthenticatedRequest,res:Response,next
     }
 }
 
-export const deleteImage = async (req: AuthenticatedRequest,res: Response,next: NextFunction
-  ):Promise<void> => {
-    try {
+export const deleteImage = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
       const { id } = req.params;
       const userId = req.user?.id;
-  
+
       const image = await Image.findOneAndDelete({ _id: id, userId });
-  
+
       if (!image) {
-         res.status(404).json({ error: "Image not found" });
-         return
+          res.status(404).json({ error: "Image not found" });
+          return;
       }
-  
+
       const params = {
-        Bucket: process.env.AWS_BUCKET_NAME as string,
-        Key: image.imageKey,
+          Bucket: process.env.AWS_BUCKET_NAME as string,
+          Key: image.imageKey,
       };
-  
+
       await s3.deleteObject(params).promise();
-  
+
       res.json({ message: "Image deleted successfully" });
-    } catch (error) {
-      console.log("Error deleting image:", error);
+  } catch (error) {
+      console.error("Error deleting image:", error);
       res.status(500).json({ error: "Error deleting image" });
-    }
-  };
+  }
+};
 
-
-  export const reorderImages = async (req: AuthenticatedRequest,res: Response,next: NextFunction
-  ) => {
-    try {
+export const reorderImages = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
       const { imageIds } = req.body;
       const userId = req.user?.id;
-  
+
       await Promise.all(
-        imageIds.map((image: { id: string; order: number }) =>
-          Image.findOneAndUpdate(
-            { _id: image.id, userId },
-            { order: image.order }
+          imageIds.map((image: { id: string; order: number }) =>
+              Image.findOneAndUpdate(
+                  { _id: image.id, userId },
+                  { order: image.order },
+                  { new: true }
+              )
           )
-        )
       );
-  
+
       res.json({ message: "Images reordered successfully" });
-    } catch (error) {
+  } catch (error) {
       console.error("Error reordering images:", error);
       res.status(500).json({ error: "Error reordering images" });
-    }
-  };
+  }
+};
